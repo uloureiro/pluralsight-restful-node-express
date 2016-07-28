@@ -4,7 +4,7 @@ var routes = function (Book) {
     var bookRouter = express.Router();
 
     //Route to manipulate all books or filter by genre using query string
-    bookRouter.route('/Books')
+    bookRouter.route('/')
         .post(function (req, res) { /* HTTP POST */
             var book = new Book(req.body);
             book.save();
@@ -25,31 +25,60 @@ var routes = function (Book) {
             });
         });
 
-    //Route to get books by id
-    bookRouter.route('/Books/:bookId')
+    //Middleware to findById
+    bookRouter.use('/:bookId', function (req, res, next) {
+        Book.findById(req.params.bookId, function (err, book) {
+            if (err)
+                res.status(500).send(err);
+            else if (book) {
+                req.book = book;
+                next();
+            }
+            else {
+                res.status(404).send('No book info found.')
+            }
+        });
+    });
+
+    //Route to manage books by id
+    bookRouter.route('/:bookId')
         .get(function (req, res) {
-            Book.findById(req.params.bookId, function (err, books) {
-                if (err)
-                    res.status(500).send(err);
-                else
-                    res.json(books);
-            });
+            res.json(req.book);
         })
-        .put(function (req,res) {
-            Book.findById(req.params.bookId, function (err, books) {
-                if (err)
+        .put(function (req, res) {
+            req.book.title = req.body.title;
+            req.book.author = req.body.author;
+            req.book.genre = req.body.genre;
+            req.book.read = req.body.read;
+            req.book.save(function(err){
+                if(err) {
                     res.status(500).send(err);
-                else
-                    book.title = req.body.title;
-                    book.author = req.body.author;
-                    book.genre = req.body.genre;
-                    book.read = req.body.read;
-                    
-                    res.json(book);
+                }
+                else {
+                    res.json(req.book);
+                }
+            });
+            res.json(req.book);
+        })
+        .patch(function (req, res) {
+            if(req.body._id)
+                delete req.body._id;
+
+            for (var p in req.body) {
+                req.book[p] = req.body[p];
+            }
+
+            req.book.save(function(err){
+                if(err) {
+                    res.status(500).send(err);
+                }
+                else {
+                    res.json(req.book);
+                }
             });
         });
 
-        return bookRouter;
+    return bookRouter;
 };
 
 module.exports = routes;
