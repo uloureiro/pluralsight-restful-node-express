@@ -2,28 +2,12 @@ var express = require('express');
 
 var routes = function (Book) {
     var bookRouter = express.Router();
+    var bookController = require('../controllers/bookController.js')(Book);
 
     //Route to manipulate all books or filter by genre using query string
     bookRouter.route('/')
-        .post(function (req, res) { /* HTTP POST */
-            var book = new Book(req.body);
-            book.save();
-            res.status(201).send(book);
-        })
-        .get(function (req, res) { /* HTTP GET */
-
-            var query = {};
-
-            if (req.query.genre)
-                query.genre = req.query.genre;
-
-            Book.find(query, function (err, books) {
-                if (err)
-                    res.status(500).send(err);
-                else
-                    res.json(books);
-            });
-        });
+        .post(bookController.post)
+        .get(bookController.get);
 
     //Middleware to findById
     bookRouter.use('/:bookId', function (req, res, next) {
@@ -42,16 +26,18 @@ var routes = function (Book) {
 
     //Route to manage books by id
     bookRouter.route('/:bookId')
+        //Get specific book by Id
         .get(function (req, res) {
             res.json(req.book);
         })
+        //Update an entire book
         .put(function (req, res) {
             req.book.title = req.body.title;
             req.book.author = req.body.author;
             req.book.genre = req.body.genre;
             req.book.read = req.body.read;
-            req.book.save(function(err){
-                if(err) {
+            req.book.save(function (err) {
+                if (err) {
                     res.status(500).send(err);
                 }
                 else {
@@ -60,21 +46,31 @@ var routes = function (Book) {
             });
             res.json(req.book);
         })
+        //Update just a part (some attribute) of a book
         .patch(function (req, res) {
-            if(req.body._id)
+            if (req.body._id)
                 delete req.body._id;
 
             for (var p in req.body) {
                 req.book[p] = req.body[p];
             }
 
-            req.book.save(function(err){
-                if(err) {
+            req.book.save(function (err) {
+                if (err) {
                     res.status(500).send(err);
                 }
                 else {
                     res.json(req.book);
                 }
+            });
+        })
+        //Delete a book
+        .delete(function (req, res) {
+            req.book.remove(function (err) {
+                if (err)
+                    res.status(500).send(err);
+                else
+                    res.status(204).send('Removed');
             });
         });
 
